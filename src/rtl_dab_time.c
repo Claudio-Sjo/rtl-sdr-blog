@@ -385,7 +385,7 @@ static void *processing_thread(void *arg)
 		 * so search a wide range around null_pos + T_NULL. */
 		{
 			int search_center = null_pos + DAB_T_NULL;
-			int search_range = DAB_T_NULL;  /* Search ±T_NULL samples */
+			int search_range = DAB_T_NULL / 4;  /* Search ±664 samples */
 			int s_start = search_center - search_range;
 			int s_end = search_center + search_range;
 			int best = search_center;
@@ -395,7 +395,7 @@ static void *processing_thread(void *arg)
 			if (s_start < 0) s_start = 0;
 			if (s_end + DAB_T_S > BUF_LEN) s_end = BUF_LEN - DAB_T_S;
 
-			for (sp = s_start; sp < s_end; sp += 4) {
+			for (sp = s_start; sp < s_end; sp += 16) {
 				cfloat corr = 0;
 				int ci;
 				for (ci = 0; ci < DAB_T_G; ci += 8)
