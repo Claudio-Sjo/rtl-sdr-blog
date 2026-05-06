@@ -359,6 +359,7 @@ static void *processing_thread(void *arg)
 		pthread_mutex_unlock(&buf_mutex);
 
 
+		fprintf(stderr, ".");
 		null_pos = ofdm_find_null(frame_buf, BUF_LEN);
 		if (null_pos < 0) {
 			fprintf(stderr, "N");
