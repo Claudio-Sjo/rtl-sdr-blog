@@ -8,6 +8,8 @@ if(BUILD_DAB_TIME)
     set(WELLE_DIR ${CMAKE_SOURCE_DIR}/lib/welle.io/src)
 
     file(GLOB WELLE_BACKEND_SRC "${WELLE_DIR}/backend/*.cpp")
+    # Remove audio decoders - not needed for time extraction
+    list(FILTER WELLE_BACKEND_SRC EXCLUDE REGEX "dab_decoder\\.cpp|dabplus_decoder\\.cpp|dab-audio\\.cpp|decoder_adapter\\.cpp")
     file(GLOB WELLE_VARIOUS_SRC "${WELLE_DIR}/various/*.cpp")
     set(WELLE_FEC_SRC
         ${WELLE_DIR}/libs/fec/decode_rs_char.c
@@ -50,11 +52,20 @@ if(BUILD_DAB_TIME)
         m
     )
 
-    # Audio codec libraries (required by welle.io backend)
+    # Audio codec libraries - only needed if audio decoders are included
+    # For time-only mode, these are excluded but may be needed for linking stubs
     find_library(MPG123_LIB mpg123)
     find_library(FAAD_LIB faad)
     find_library(LAME_LIB mp3lame)
-    target_link_libraries(dab_time_cli ${MPG123_LIB} ${FAAD_LIB} ${LAME_LIB})
+    if(MPG123_LIB)
+        target_link_libraries(dab_time_cli ${MPG123_LIB})
+    endif()
+    if(FAAD_LIB)
+        target_link_libraries(dab_time_cli ${FAAD_LIB})
+    endif()
+    if(LAME_LIB)
+        target_link_libraries(dab_time_cli ${LAME_LIB})
+    endif()
 
     install(TARGETS dab_time_cli DESTINATION bin)
 endif()
