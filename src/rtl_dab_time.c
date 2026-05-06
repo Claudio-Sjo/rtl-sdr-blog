@@ -26,6 +26,9 @@
 #ifndef _WIN32
 #include <unistd.h>
 #include <sys/timex.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #else
 #error "rtl_dab_time is Linux-only (requires adjtimex)"
 #endif
@@ -209,7 +212,7 @@ static void sighandler(int signum)
 static void rtlsdr_callback(unsigned char *buf, uint32_t len, void *ctx)
 {
 	uint32_t i;
-	uint8_t lo = 255, hi = 0;
+	uint8_t lo, hi; lo = 255; hi = 0;
 	(void)ctx;
 	if (do_exit) return;
 
@@ -273,7 +276,7 @@ static void *tcp_reader_fn(void *arg)
 		if (n <= 0) { do_exit = 1; break; }
 
 		/* Track amplitude for AGC */
-		uint8_t lo = 255, hi = 0;
+		uint8_t lo, hi; lo = 255; hi = 0;
 		for (idx = 0; idx < (uint32_t)n; idx++) {
 			if (buf[idx] < lo) lo = buf[idx];
 			if (buf[idx] > hi) hi = buf[idx];
@@ -566,7 +569,7 @@ int main(int argc, char **argv)
 		case 'T': enable_biastee = 1; break;
 		case 't': {
 			use_tcp = 1;
-			char *colon = strchr(optarg, ':');
+			char *colon; colon = strchr(optarg, ':');
 			if (colon) { *colon = 0; tcp_host = optarg; tcp_port = atoi(colon+1); }
 			else tcp_host = optarg;
 			break;
