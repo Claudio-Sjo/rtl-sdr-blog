@@ -30,7 +30,12 @@ if(BUILD_DAB_TIME)
         ${WELLE_INPUT_SRC}
     )
 
-    target_compile_definitions(dab_time_cli PRIVATE DABLIN_AAC_FAAD2 HAVE_RTLSDR _FILE_OFFSET_BITS=64)
+    target_compile_definitions(dab_time_cli PRIVATE DABLIN_AAC_FAAD2 HAVE_RTLSDR)
+
+    # 32-bit ARM (RPi 1) needs large file support for mpg123 symbol compatibility
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4 AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+        target_compile_definitions(dab_time_cli PRIVATE _FILE_OFFSET_BITS=64)
+    endif()
     set_target_properties(dab_time_cli PROPERTIES LINKER_LANGUAGE CXX)
     target_compile_features(dab_time_cli PRIVATE cxx_std_14)
 
