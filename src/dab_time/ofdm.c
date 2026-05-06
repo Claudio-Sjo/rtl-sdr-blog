@@ -194,22 +194,12 @@ void ofdm_process_prs(struct ofdm_state *s, cfloat *symbol_time)
 void ofdm_demod_symbol(struct ofdm_state *s, cfloat *symbol_time, uint8_t *soft_bits)
 {
 	int i;
-	cfloat corrected[DAB_T_U];
 
-	/* Apply fine frequency correction before FFT */
-	for (i = 0; i < DAB_T_U; i++) {
-		float phase = -2.0f * M_PI * s->freq_offset * (float)(i + DAB_T_G) / (float)DAB_SAMPLE_RATE;
-		corrected[i] = symbol_time[DAB_T_G + i] * (cosf(phase) + I * sinf(phase));
-	}
-
-	/* FFT */
-	ofdm_fft(corrected, s->fft_out, DAB_T_U, 0);
+	/* FFT (skip guard interval) */
+	ofdm_fft(symbol_time + DAB_T_G, s->fft_out, DAB_T_U, 0);
 
 	if (soft_bits) {
-		/* Iterate FFT bins 256..1792 (with fftshift applied implicitly via
-		 * consistent PRS/data processing - both get same FFT layout) */
-		 * Since we DON'T fftshift, and DQPSK is differential (cancels
-		 * any constant phase), just iterate bins 256..1792 directly. */
+		/* Iterate FFT bins 256..1792, DQPSK differential decode */
 		int k = 0;
 		for (i = 256; i < 1793; i++) {
 			int kk;
