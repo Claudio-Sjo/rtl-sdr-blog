@@ -51,19 +51,7 @@ if(BUILD_DAB_TIME)
     )
 
     # Audio codec libraries (required by welle.io backend)
-    pkg_check_modules(MPG123 REQUIRED libmpg123)
-    target_link_libraries(dab_time_cli ${MPG123_LIBRARIES})
-    target_include_directories(dab_time_cli PRIVATE ${MPG123_INCLUDE_DIRS})
-
-    find_library(FAAD_LIB faad)
-    if(FAAD_LIB)
-        target_link_libraries(dab_time_cli ${FAAD_LIB})
-    endif()
-
-    find_library(LAME_LIB mp3lame)
-    if(LAME_LIB)
-        target_link_libraries(dab_time_cli ${LAME_LIB})
-    endif()
+    target_link_libraries(dab_time_cli mpg123 faad mp3lame)
 
     install(TARGETS dab_time_cli DESTINATION bin)
 endif()
