@@ -205,19 +205,9 @@ void ofdm_demod_symbol(struct ofdm_state *s, cfloat *symbol_time, uint8_t *soft_
 	/* FFT */
 	ofdm_fft(corrected, s->fft_out, DAB_T_U, 0);
 
-	/* fftshift: swap first and second half (like dabtools) */
-	{
-		int j;
-		cfloat tmp;
-		for (j = 0; j < DAB_T_U / 2; j++) {
-			tmp = s->fft_out[j];
-			s->fft_out[j] = s->fft_out[j + DAB_T_U / 2];
-			s->fft_out[j + DAB_T_U / 2] = tmp;
-		}
-	}
-
 	if (soft_bits) {
-		/* Iterate FFT bins exactly like dabtools does AFTER its fftshift.
+		/* Iterate FFT bins 256..1792 (with fftshift applied implicitly via
+		 * consistent PRS/data processing - both get same FFT layout) */
 		 * Since we DON'T fftshift, and DQPSK is differential (cancels
 		 * any constant phase), just iterate bins 256..1792 directly. */
 		int k = 0;

@@ -60,7 +60,7 @@ static const struct dab_channel dab_channels[] = {
 
 /* ─── Configuration ─────────────────────────────────────────────────── */
 
-#define BUF_LEN         (DAB_T_F * 2)  /* Two DAB frames for timing margin */
+#define BUF_LEN         (DAB_T_F)      /* One DAB frame */
 #define MAX_FRAMES      10             /* Give up after this many frames without sync */
 #define SCAN_DWELL_MS   800            /* Time to dwell on each channel during scan */
 #define SCAN_SETTLE_MS  100            /* Settling time after retune (AGC) */
@@ -335,7 +335,6 @@ static void *processing_thread(void *arg)
 	int frames_without_sync = 0;
 	int soft_bits_len = 0;
 
-	fprintf(stderr, "[proc thread started]\n");
 
 	frame_buf = (cfloat *)malloc(BUF_LEN * sizeof(cfloat));
 	if (!frame_buf) {
@@ -359,7 +358,6 @@ static void *processing_thread(void *arg)
 		buf_ready_flag = 0;
 		pthread_mutex_unlock(&buf_mutex);
 
-		fprintf(stderr, "F");
 
 		null_pos = ofdm_find_null(frame_buf, BUF_LEN);
 		if (null_pos < 0) {
@@ -388,7 +386,6 @@ static void *processing_thread(void *arg)
 		}
 
 		/* Estimate fine frequency offset from PRS cyclic prefix */
-		ofdm_estimate_freq(&ofdm, &frame_buf[pos]);
 
 		/* PRS - store as phase reference */
 		ofdm_demod_symbol(&ofdm, &frame_buf[pos], NULL);
