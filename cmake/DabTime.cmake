@@ -8,8 +8,8 @@ if(BUILD_DAB_TIME)
     set(WELLE_DIR ${CMAKE_SOURCE_DIR}/lib/welle.io/src)
 
     file(GLOB WELLE_BACKEND_SRC "${WELLE_DIR}/backend/*.cpp")
-    # Remove audio decoders - not needed for time extraction
-    list(FILTER WELLE_BACKEND_SRC EXCLUDE REGEX "dab_decoder\\.cpp|dabplus_decoder\\.cpp|dab-audio\\.cpp|decoder_adapter\\.cpp")
+    # Remove audio/MSC components - not needed for time extraction
+    list(FILTER WELLE_BACKEND_SRC EXCLUDE REGEX "dab_decoder|dabplus_decoder|dab-audio|decoder_adapter|msc-handler|mot_manager|pad_decoder")
     file(GLOB WELLE_VARIOUS_SRC "${WELLE_DIR}/various/*.cpp")
     set(WELLE_FEC_SRC
         ${WELLE_DIR}/libs/fec/decode_rs_char.c
