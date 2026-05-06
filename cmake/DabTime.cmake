@@ -30,7 +30,7 @@ if(BUILD_DAB_TIME)
         ${WELLE_INPUT_SRC}
     )
 
-    target_compile_definitions(dab_time_cli PRIVATE DABLIN_AAC_FAAD2 HAVE_RTLSDR)
+    target_compile_definitions(dab_time_cli PRIVATE DABLIN_AAC_FAAD2 HAVE_RTLSDR _FILE_OFFSET_BITS=64)
     set_target_properties(dab_time_cli PROPERTIES LINKER_LANGUAGE CXX)
     target_compile_features(dab_time_cli PRIVATE cxx_std_14)
 
