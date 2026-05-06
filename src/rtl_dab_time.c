@@ -358,6 +358,12 @@ static void *processing_thread(void *arg)
 		buf_ready_flag = 0;
 		pthread_mutex_unlock(&buf_mutex);
 
+		/* Skip next frame to give slow CPUs time to process */
+		pthread_mutex_lock(&buf_mutex);
+		sample_buf_fill = 0;
+		buf_ready_flag = 0;
+		pthread_mutex_unlock(&buf_mutex);
+
 
 		fprintf(stderr, ".");
 		null_pos = ofdm_find_null(frame_buf, BUF_LEN);
