@@ -140,15 +140,17 @@ int ofdm_find_null(cfloat *samples, int len)
 	int i, best_pos = -1;
 	float power, min_power = 1e30f;
 	float avg_power = 0.0f;
-	int window = DAB_T_NULL / 4;
+	int window = DAB_T_NULL / 4;  /* 664 samples */
+	int step = DAB_T_NULL;        /* Step by full null length for speed */
 	int num_windows = 0;
 
 	if (len < DAB_T_NULL + DAB_T_S) return -1;
 
-	for (i = 0; i < len - window; i += window / 2) {
+	/* Coarse search: large step, subsample within window */
+	for (i = 0; i < len - window; i += step) {
 		int j;
 		power = 0.0f;
-		for (j = 0; j < window; j++) {
+		for (j = 0; j < window; j += 8) {  /* Subsample by 8 */
 			float re = crealf(samples[i + j]);
 			float im = cimagf(samples[i + j]);
 			power += re * re + im * im;

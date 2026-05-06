@@ -60,7 +60,7 @@ static const struct dab_channel dab_channels[] = {
 
 /* ─── Configuration ─────────────────────────────────────────────────── */
 
-#define BUF_LEN         (DAB_T_F * 2)  /* Two frames for timing margin */
+#define BUF_LEN         (DAB_T_F)      /* One frame - faster null detection */
 #define MAX_FRAMES      10             /* Give up after this many frames without sync */
 #define SCAN_DWELL_MS   800            /* Time to dwell on each channel during scan */
 #define SCAN_SETTLE_MS  100            /* Settling time after retune (AGC) */
@@ -240,6 +240,62 @@ static void *dongle_thread_fn(void *arg)
 	return NULL;
 }
 
+/* ─── TCP reader thread ─────────────────────────────────────────────── */
+
+struct tcp_args { char *host; int port; };
+
+static void *tcp_reader_fn(void *arg)
+{
+	struct tcp_args *ta = (struct tcp_args *)arg;
+	int sock;
+	struct sockaddr_in addr;
+	unsigned char buf[16384];
+	int n;
+	uint32_t idx;
+
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(ta->port);
+	inet_pton(AF_INET, ta->host, &addr.sin_addr);
+
+	if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+		perror("rtl_tcp connect");
+		do_exit = 1;
+		return NULL;
+	}
+	fprintf(stderr, "Connected to rtl_tcp at %s:%d\n", ta->host, ta->port);
+
+	/* Skip 12-byte dongle info header */
+	read(sock, buf, 12);
+
+	while (!do_exit) {
+		n = read(sock, buf, sizeof(buf));
+		if (n <= 0) { do_exit = 1; break; }
+
+		/* Track amplitude for AGC */
+		uint8_t lo = 255, hi = 0;
+		for (idx = 0; idx < (uint32_t)n; idx++) {
+			if (buf[idx] < lo) lo = buf[idx];
+			if (buf[idx] > hi) hi = buf[idx];
+		}
+		agc_min_amplitude = lo;
+		agc_max_amplitude = hi;
+
+		pthread_mutex_lock(&buf_mutex);
+		for (idx = 0; idx < (uint32_t)n && sample_buf_fill < BUF_LEN; idx += 2) {
+			sample_buf[sample_buf_fill++] =
+				((float)buf[idx] - 127.5f) + I * ((float)buf[idx+1] - 127.5f);
+		}
+		if (sample_buf_fill >= BUF_LEN) {
+			buf_ready_flag = 1;
+			pthread_cond_signal(&buf_ready);
+		}
+		pthread_mutex_unlock(&buf_mutex);
+	}
+	close(sock);
+	return NULL;
+}
+
 /* ─── DAB Signal Detection ──────────────────────────────────────────
  * Checks if a buffer contains a DAB signal by looking for the null symbol.
  * Returns 1 if DAB detected, 0 otherwise. */
@@ -354,12 +410,6 @@ static void *processing_thread(void *arg)
 		if (do_exit) { pthread_mutex_unlock(&buf_mutex); break; }
 
 		memcpy(frame_buf, sample_buf, BUF_LEN * sizeof(cfloat));
-		sample_buf_fill = 0;
-		buf_ready_flag = 0;
-		pthread_mutex_unlock(&buf_mutex);
-
-		/* Skip next frame to give slow CPUs time to process */
-		pthread_mutex_lock(&buf_mutex);
 		sample_buf_fill = 0;
 		buf_ready_flag = 0;
 		pthread_mutex_unlock(&buf_mutex);
@@ -499,10 +549,13 @@ int main(int argc, char **argv)
 	struct sigaction sigact;
 	pthread_t proc_thread;
 	struct proc_args args;
+	char *tcp_host = NULL;
+	int tcp_port = 1234;
+	int use_tcp = 0;
 
 	memset(&args, 0, sizeof(args));
 
-	while ((opt = getopt(argc, argv, "f:d:g:p:s1Th")) != -1) {
+	while ((opt = getopt(argc, argv, "f:d:g:p:s1Tht:")) != -1) {
 		switch (opt) {
 		case 'f': freq = (uint32_t)atofs(optarg); break;
 		case 'd': dev_index = verbose_device_search(optarg); dev_given = 1; break;
@@ -511,15 +564,23 @@ int main(int argc, char **argv)
 		case 's': args.set_only = 1; break;
 		case '1': args.one_shot = 1; break;
 		case 'T': enable_biastee = 1; break;
+		case 't': {
+			use_tcp = 1;
+			char *colon = strchr(optarg, ':');
+			if (colon) { *colon = 0; tcp_host = optarg; tcp_port = atoi(colon+1); }
+			else tcp_host = optarg;
+			break;
+		}
 		case 'h': default: usage();
 		}
 	}
 
-	if (!dev_given) dev_index = verbose_device_search("0");
-	if (dev_index < 0) exit(1);
-
-	r = rtlsdr_open(&dev, (uint32_t)dev_index);
-	if (r < 0) { fprintf(stderr, "Failed to open device #%d\n", dev_index); exit(1); }
+	if (!use_tcp) {
+		if (!dev_given) dev_index = verbose_device_search("0");
+		if (dev_index < 0) exit(1);
+		r = rtlsdr_open(&dev, (uint32_t)dev_index);
+		if (r < 0) { fprintf(stderr, "Failed to open device #%d\n", dev_index); exit(1); }
+	}
 
 	/* Signal handlers */
 	sigact.sa_handler = sighandler;
