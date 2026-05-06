@@ -26,6 +26,7 @@ if(BUILD_DAB_TIME)
 
     add_executable(dab_time_cli
         ${CMAKE_SOURCE_DIR}/src/dab_time_cli.cpp
+        ${CMAKE_SOURCE_DIR}/src/msc_stub.cpp
         ${WELLE_BACKEND_SRC}
         ${WELLE_VARIOUS_SRC}
         ${WELLE_FEC_SRC}
