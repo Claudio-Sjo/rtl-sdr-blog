@@ -198,6 +198,17 @@ void ofdm_demod_symbol(struct ofdm_state *s, cfloat *symbol_time, uint8_t *soft_
 	/* FFT (skip guard interval) */
 	ofdm_fft(symbol_time + DAB_T_G, s->fft_out, DAB_T_U, 0);
 
+	/* fftshift: swap halves so DC is at center */
+	{
+		int j;
+		cfloat tmp;
+		for (j = 0; j < DAB_T_U / 2; j++) {
+			tmp = s->fft_out[j];
+			s->fft_out[j] = s->fft_out[j + DAB_T_U / 2];
+			s->fft_out[j + DAB_T_U / 2] = tmp;
+		}
+	}
+
 	if (soft_bits) {
 		/* Iterate FFT bins 256..1792, DQPSK differential decode */
 		int k = 0;
